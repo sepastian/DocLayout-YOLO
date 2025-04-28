@@ -192,6 +192,88 @@ Training is conducted on 8 GPUs with a global batch size of 64 (8 images per dev
 The DocSynth300K pretrained model can be downloaded from [here](https://huggingface.co/juliozhao/DocLayout-YOLO-DocSynth300K-pretrain). Change ```checkpoint.pt``` to the path of model to be evaluated during evaluation.
 
 
+## Training and Evaluation on Your Own Datasets
+
+This section shows how to finetune and evalutate your own models, based on DocLayout-YOLO. These instructions have been tested under Linux.
+
+YOLO expects a config file at `$HOME/.config/Ultralytics/settings.yaml`. Most importantly, the YOLO config specifies the dataset root folder, which holds all datasets. Each dataset holds images, labels and assignments of elements to training and tests sets. Finally, each dataset requires a config file in `DocLayout-YOLO`, the dataset config.
+
+1. Specify YOLO's `datasets_dir`
+
+Edit `$HOME/.config/Ultralytics/settings.yaml`, specify the dataset root folder, under `datasets_dir`.
+
+```shell
+$ cat ~/.config/Ultralytics/settings.yaml 
+settings_version: 0.0.4
+datasets_dir: /home/sebastian/Datasets/
+# <more options left out for brevity>
+```
+
+2. Prepare dataset
+
+Inside the dataset root folder specified above, create a folder holding the dataset. Place the images inside `images/`, create labels and place them in `labels/`. Create `train.txt` and `test.txt`, listing which images are part of the training set and which images are part of the test set.
+
+```shell
+# sample dataset
+mydataset
+  images
+    001.jpg
+    002.jpg
+  labels
+    001.txt
+    002.txt
+  train.txt
+  test.txt
+```
+
+The files `train.txt` and `test.txt` containg the name of single image file per line, relative to the dataset directory.
+
+```shell
+# train.txt
+./images/001.jpg
+./images/002.jpg
+```
+
+3. Clone DocLayout-YOLO
+
+```shell
+git clone git@github.com:opendatalab/DocLayout-YOLO.git
+cd DocLayout-YOLO
+```
+
+4. Add Dataset Config
+
+To be able to use a dataset in DocLayout-YOLO, create a config file at `doclayout_yolo/cfg/datasets/mydataset.yml`. For details see https://docs.ultralytics.com/datasets/detect/.
+
+```shell
+# DocLayout-YOLO/cfg/datasets/mydataset.yml
+path: mydataset
+train: train.txt
+val: test.txt
+test: test.txt
+# classes
+names:
+    0: Index
+    1: Line
+    2: Location
+    3: PageNumber
+```
+
+5. Download a checkpoint
+
+See "Training and Evaluation" above.
+
+6. Start training
+
+Specify the checkpoint from above under `--pretrain`. Specify the name of the dataset config created above under `--data`, without the `*.yaml` extension.
+
+```shell
+python ./train.py --data mydataset --model m-doclayout --epoch 500 \
+  --image-size 1600 --batch-size 64 --project public_dataset/test \
+   --plot 1 --optimizer SGD --lr0 0.04 --device 0 \
+   --pretrain layout_data/doclayout_yolo_docsynth300k_imgsz1600.pt
+```
+
 ## Acknowledgement
 
 The code base is built with [ultralytics](https://github.com/ultralytics/ultralytics) and [YOLO-v10](https://github.com/lyuwenyu/RT-DETR).
